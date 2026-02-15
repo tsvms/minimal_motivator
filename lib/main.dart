@@ -28,8 +28,9 @@ class NotificationService {
     );
     // Χρειαζόμαστε και το Android initialization για να μην κρασάρει,
     // ακόμα κι αν στοχεύουμε iOS.
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
     await _notifications.initialize(
       const InitializationSettings(iOS: iosSettings, android: androidSettings),
     );
@@ -47,13 +48,15 @@ class NotificationService {
       tz.TZDateTime.from(scheduledTime, tz.local),
       const NotificationDetails(iOS: DarwinNotificationDetails()),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
   static Future<void> scheduleDailyQuote(TimeOfDay time, String quote) async {
     final now = DateTime.now();
-    var scheduledDate = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    var scheduledDate =
+        DateTime(now.year, now.month, now.day, time.hour, time.minute);
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
@@ -65,7 +68,8 @@ class NotificationService {
       tz.TZDateTime.from(scheduledDate, tz.local),
       const NotificationDetails(iOS: DarwinNotificationDetails()),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -97,7 +101,7 @@ const List<String> kQuotes = [
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.init();
-  
+
   // Κάνει τη status bar (πάνω μέρος κινητού) διάφανη για full screen look
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -118,7 +122,8 @@ class MinimalApp extends StatelessWidget {
         brightness: Brightness.light,
         scaffoldBackgroundColor: Colors.white,
         primaryColor: Colors.black,
-        textSelectionTheme: const TextSelectionThemeData(cursorColor: Colors.black),
+        textSelectionTheme:
+            const TextSelectionThemeData(cursorColor: Colors.black),
         textTheme: GoogleFonts.interTextTheme(),
         useMaterial3: true,
       ),
@@ -147,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Load Quote
     setState(() {
       _currentQuote = kQuotes[Random().nextInt(kQuotes.length)];
@@ -166,7 +171,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (timeString != null) {
       final parts = timeString.split(':');
       setState(() {
-        _quoteTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+        _quoteTime =
+            TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
       });
     }
   }
@@ -190,9 +196,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (time != null) {
       final now = DateTime.now();
-      var scheduledDate = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-      if (scheduledDate.isBefore(now)) scheduledDate = scheduledDate.add(const Duration(days: 1));
-      NotificationService.scheduleNotification(id: id, title: title, scheduledTime: scheduledDate);
+      var scheduledDate =
+          DateTime(now.year, now.month, now.day, time.hour, time.minute);
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+      NotificationService.scheduleNotification(
+          id: id, title: title, scheduledTime: scheduledDate);
     }
   }
 
@@ -201,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _tasks[index]['isDone'] = !_tasks[index]['isDone'];
     });
     _saveTasks();
-    
+
     // Αν ολοκληρωθεί, περιμένουμε λίγο και το σβήνουμε ή το αφήνουμε;
     // Εδώ το αφήνουμε για να φαίνεται η πρόοδος.
   }
@@ -221,7 +231,8 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(primary: Colors.black, onSurface: Colors.black),
+            colorScheme: const ColorScheme.light(
+                primary: Colors.black, onSurface: Colors.black),
           ),
           child: child!,
         );
@@ -232,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final prefs = await SharedPreferences.getInstance();
       prefs.setString('quote_time', '${picked.hour}:${picked.minute}');
       setState(() => _quoteTime = picked);
-      
+
       NotificationService.scheduleDailyQuote(picked, _currentQuote);
     }
   }
@@ -263,32 +274,41 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         DateFormat('EEEE').format(DateTime.now()).toUpperCase(),
                         style: GoogleFonts.inter(
-                          fontSize: 12, 
-                          fontWeight: FontWeight.w600, 
-                          letterSpacing: 2, 
-                          color: Colors.grey[400]
-                        ),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2,
+                            color: Colors.grey[400]),
                       ),
                       GestureDetector(
                         onTap: _setQuoteTime,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: _quoteTime != null ? Colors.black : Colors.grey[100],
+                            color: _quoteTime != null
+                                ? Colors.black
+                                : Colors.grey[100],
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             children: [
-                              Icon(CupertinoIcons.bell, size: 14, color: _quoteTime != null ? Colors.white : Colors.black),
+                              Icon(CupertinoIcons.bell,
+                                  size: 14,
+                                  color: _quoteTime != null
+                                      ? Colors.white
+                                      : Colors.black),
                               const SizedBox(width: 6),
                               Text(
-                                _quoteTime != null ? _quoteTime!.format(context) : "Set Time",
+                                _quoteTime != null
+                                    ? _quoteTime!.format(context)
+                                    : "Set Time",
                                 style: TextStyle(
-                                  fontSize: 12, 
-                                  fontWeight: FontWeight.bold,
-                                  color: _quoteTime != null ? Colors.white : Colors.black
-                                ),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: _quoteTime != null
+                                        ? Colors.white
+                                        : Colors.black),
                               ),
                             ],
                           ),
@@ -315,18 +335,21 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[50], // Πολύ απαλό γκρι για διαχωρισμό
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(40)),
                 ),
                 child: _tasks.isEmpty
                     ? Center(
                         child: Text(
                           "No tasks.\nEnjoy the silence.",
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(color: Colors.grey[300], fontSize: 16),
+                          style: GoogleFonts.inter(
+                              color: Colors.grey[300], fontSize: 16),
                         ).animate().fadeIn(delay: 300.ms),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.only(top: 30, left: 20, right: 20, bottom: 100),
+                        padding: const EdgeInsets.only(
+                            top: 30, left: 20, right: 20, bottom: 100),
                         itemCount: _tasks.length,
                         itemBuilder: (context, index) {
                           final task = _tasks[index];
@@ -337,7 +360,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             background: Container(
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.only(right: 20),
-                              child: const Icon(CupertinoIcons.trash, color: Colors.red),
+                              child: const Icon(CupertinoIcons.trash,
+                                  color: Colors.red),
                             ),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
@@ -359,42 +383,55 @@ class _HomeScreenState extends State<HomeScreen> {
                                   GestureDetector(
                                     onTap: () => _toggleTask(index),
                                     child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
+                                      duration:
+                                          const Duration(milliseconds: 200),
                                       width: 24,
                                       height: 24,
                                       decoration: BoxDecoration(
-                                        color: task['isDone'] ? Colors.black : Colors.transparent,
-                                        border: Border.all(color: Colors.black, width: 1.5),
+                                        color: task['isDone']
+                                            ? Colors.black
+                                            : Colors.transparent,
+                                        border: Border.all(
+                                            color: Colors.black, width: 1.5),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: task['isDone']
-                                          ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                          ? const Icon(Icons.check,
+                                              size: 16, color: Colors.white)
                                           : null,
                                     ),
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         AnimatedOpacity(
-                                          duration: const Duration(milliseconds: 200),
+                                          duration:
+                                              const Duration(milliseconds: 200),
                                           opacity: task['isDone'] ? 0.3 : 1.0,
                                           child: Text(
                                             task['title'],
                                             style: GoogleFonts.inter(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w500,
-                                              decoration: task['isDone'] ? TextDecoration.lineThrough : null,
+                                              decoration: task['isDone']
+                                                  ? TextDecoration.lineThrough
+                                                  : null,
                                             ),
                                           ),
                                         ),
-                                        if (task['time'] != null && !task['isDone'])
+                                        if (task['time'] != null &&
+                                            !task['isDone'])
                                           Padding(
-                                            padding: const EdgeInsets.only(top: 4.0),
+                                            padding:
+                                                const EdgeInsets.only(top: 4.0),
                                             child: Text(
                                               "Reminder at ${task['time']}",
-                                              style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                                              style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[400]),
                                             ),
                                           ),
                                       ],
@@ -403,7 +440,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
-                          ).animate().fadeIn(delay: (100 * index).ms).slideX(begin: 0.2);
+                          )
+                              .animate()
+                              .fadeIn(delay: (100 * index).ms)
+                              .slideX(begin: 0.2);
                         },
                       ),
               ),
@@ -425,9 +465,10 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) => Container(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 40,
-            top: 40, left: 30, right: 30
-          ),
+              bottom: MediaQuery.of(context).viewInsets.bottom + 40,
+              top: 40,
+              left: 30,
+              right: 30),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
@@ -436,10 +477,13 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("NEW FOCUS", style: GoogleFonts.inter(fontSize: 12, letterSpacing: 2, color: Colors.grey)),
+              Text("NEW FOCUS",
+                  style: GoogleFonts.inter(
+                      fontSize: 12, letterSpacing: 2, color: Colors.grey)),
               TextField(
                 autofocus: true,
-                style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w500),
+                style: GoogleFonts.inter(
+                    fontSize: 22, fontWeight: FontWeight.w500),
                 decoration: const InputDecoration(
                   hintText: "What needs doing?",
                   border: InputBorder.none,
@@ -447,10 +491,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 onChanged: (val) => newTitle = val,
                 onSubmitted: (_) {
-                   if (newTitle.isNotEmpty) {
-                      _addTask(newTitle, selectedTime);
-                      Navigator.pop(context);
-                    }
+                  if (newTitle.isNotEmpty) {
+                    _addTask(newTitle, selectedTime);
+                    Navigator.pop(context);
+                  }
                 },
               ),
               const SizedBox(height: 20),
@@ -463,7 +507,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         initialTime: TimeOfDay.now(),
                         builder: (context, child) => Theme(
                           data: ThemeData.light().copyWith(
-                            colorScheme: const ColorScheme.light(primary: Colors.black, onSurface: Colors.black),
+                            colorScheme: const ColorScheme.light(
+                                primary: Colors.black, onSurface: Colors.black),
                           ),
                           child: child!,
                         ),
@@ -471,19 +516,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       setSheetState(() => selectedTime = t);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
-                        color: selectedTime != null ? Colors.black : Colors.grey[100],
+                        color: selectedTime != null
+                            ? Colors.black
+                            : Colors.grey[100],
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: Row(
                         children: [
-                          Icon(CupertinoIcons.alarm, size: 16, color: selectedTime != null ? Colors.white : Colors.black),
+                          Icon(CupertinoIcons.alarm,
+                              size: 16,
+                              color: selectedTime != null
+                                  ? Colors.white
+                                  : Colors.black),
                           if (selectedTime != null) ...[
                             const SizedBox(width: 8),
                             Text(
                               selectedTime!.format(context),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ]
                         ],
@@ -505,7 +559,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Colors.black,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.arrow_upward, color: Colors.white),
+                      child:
+                          const Icon(Icons.arrow_upward, color: Colors.white),
                     ),
                   )
                 ],
