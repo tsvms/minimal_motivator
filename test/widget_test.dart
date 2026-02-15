@@ -1,30 +1,23 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:minimal_motivator/main.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:apatheia/main.dart'; // Βεβαιώσου ότι το όνομα στο pubspec.yaml είναι apatheia
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('Apatheia smoke test', (WidgetTester tester) async {
+    // Φόρτωση της εφαρμογής
     await tester.pumpWidget(const MinimalApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Έλεγχος αν εμφανίζεται το κείμενο για "No tasks" όταν η λίστα είναι άδεια
+    expect(find.text("No tasks.\nEnjoy the silence."), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Έλεγχος αν υπάρχει το κουμπί προσθήκης (CupertinoIcons.add)
+    expect(find.byIcon(CupertinoIcons.add), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Πάτημα του κουμπιού προσθήκης
+    await tester.tap(find.byIcon(CupertinoIcons.add));
+    await tester.pumpAndSettle(); // Περιμένουμε να ανοίξει το bottom sheet
+
+    // Έλεγχος αν άνοιξε το παράθυρο με τον τίτλο "NEW FOCUS"
+    expect(find.text("NEW FOCUS"), findsOneWidget);
   });
 }

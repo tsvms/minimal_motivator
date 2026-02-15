@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,7 +22,6 @@ class NotificationService {
   static Future<void> init() async {
     tz.initializeTimeZones();
 
-    // Ορισμός κατηγορίας για το κουμπί "Done" στο iOS
     final DarwinNotificationCategory taskCategory = DarwinNotificationCategory(
       'task_actions',
       actions: <DarwinNotificationAction>[
@@ -209,7 +209,7 @@ class MinimalApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: const Color(0xFFF9F9F9),
         primaryColor: Colors.black,
         textSelectionTheme:
             const TextSelectionThemeData(cursorColor: Colors.black),
@@ -306,9 +306,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _toggleTask(int index) {
+void _toggleTask(int index) {
     setState(() {
       _tasks[index]['isDone'] = !_tasks[index]['isDone'];
+
+      // Αν το task ολοκληρώθηκε (έγινε true)
+      if (_tasks[index]['isDone']) {
+        // Παίζει τον διακριτικό ήχο "κλικ" του συστήματος
+        SystemSound.play(SystemSoundType.click);
+
+        // Προσθέτει μια ελαφριά δόνηση (Haptic Feedback) για "premium" αίσθηση
+        HapticFeedback.mediumImpact();
+      }
     });
     _saveTasks();
   }
@@ -345,201 +354,246 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF9F9F9),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddTaskSheet(context),
         backgroundColor: Colors.black,
-        elevation: 0,
-        shape: const CircleBorder(),
+        elevation: 8,
+        shape: ContinuousRectangleBorder(
+          borderRadius: BorderRadius.circular(56),
+        ),
         child: const Icon(CupertinoIcons.add, color: Colors.white),
       ).animate().scale(delay: 500.ms, duration: 300.ms),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        DateFormat('EEEE').format(DateTime.now()).toUpperCase(),
-                        style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 2,
-                            color: Colors.grey[400]),
-                      ),
-                      GestureDetector(
-                        onTap: _setQuoteTime,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: _quoteTime != null
-                                ? Colors.black
-                                : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            DateFormat('EEEE')
+                                .format(DateTime.now())
+                                .toUpperCase(),
+                            style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 2,
+                                color: Colors.grey[400]),
                           ),
-                          child: Row(
-                            children: [
-                              Icon(CupertinoIcons.bell,
-                                  size: 14,
-                                  color: _quoteTime != null
-                                      ? Colors.white
-                                      : Colors.black),
-                              const SizedBox(width: 6),
-                              Text(
-                                _quoteTime != null
-                                    ? _quoteTime!.format(context)
-                                    : "Set Time",
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: _quoteTime != null
-                                        ? Colors.white
-                                        : Colors.black),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-                  Text(
-                    _currentQuote,
-                    style: GoogleFonts.inter(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w300,
-                        height: 1.2,
-                        color: Colors.black),
-                  ).animate().fadeIn(duration: 800.ms).moveY(begin: 20, end: 0),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(40)),
-                ),
-                child: _tasks.isEmpty
-                    ? Center(
-                        child: Text(
-                          "No tasks.\nEnjoy the silence.",
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                              color: Colors.grey[300], fontSize: 16),
-                        ).animate().fadeIn(delay: 300.ms),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(
-                            top: 30, left: 20, right: 20, bottom: 100),
-                        itemCount: _tasks.length,
-                        itemBuilder: (context, index) {
-                          final task = _tasks[index];
-                          return Dismissible(
-                            key: Key(task['id'].toString()),
-                            direction: DismissDirection.endToStart,
-                            onDismissed: (_) => _deleteTask(index),
-                            background: Container(
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 20),
-                              child: const Icon(CupertinoIcons.trash,
-                                  color: Colors.red),
-                            ),
+                          GestureDetector(
+                            onTap: _setQuoteTime,
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(24),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.03),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  )
-                                ],
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: ShapeDecoration(
+                                color: _quoteTime != null
+                                    ? Colors.black
+                                    : Colors.grey[200],
+                                shape: ContinuousRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
                               ),
                               child: Row(
                                 children: [
-                                  GestureDetector(
-                                    onTap: () => _toggleTask(index),
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 200),
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: task['isDone']
-                                            ? Colors.black
-                                            : Colors.transparent,
-                                        border: Border.all(
-                                            color: Colors.black, width: 1.5),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: task['isDone']
-                                          ? const Icon(Icons.check,
-                                              size: 16, color: Colors.white)
-                                          : null,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        AnimatedOpacity(
-                                          duration:
-                                              const Duration(milliseconds: 200),
-                                          opacity: task['isDone'] ? 0.3 : 1.0,
-                                          child: Text(
-                                            task['title'],
-                                            style: GoogleFonts.inter(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                              decoration: task['isDone']
-                                                  ? TextDecoration.lineThrough
-                                                  : null,
-                                            ),
-                                          ),
-                                        ),
-                                        if (task['time'] != null &&
-                                            !task['isDone'])
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 4.0),
-                                            child: Text(
-                                              "Reminder at ${task['time']}",
-                                              style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.grey[400]),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
+                                  Icon(CupertinoIcons.bell,
+                                      size: 14,
+                                      color: _quoteTime != null
+                                          ? Colors.white
+                                          : Colors.black),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _quoteTime != null
+                                        ? _quoteTime!.format(context)
+                                        : "Set Time",
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: _quoteTime != null
+                                            ? Colors.white
+                                            : Colors.black),
                                   ),
                                 ],
                               ),
                             ),
                           )
-                              .animate()
-                              .fadeIn(delay: (100 * index).ms)
-                              .slideX(begin: 0.2);
-                        },
+                        ],
                       ),
-              ),
+                      const SizedBox(height: 40),
+                      Text(
+                        _currentQuote,
+                        style: GoogleFonts.lora(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w400,
+                            fontStyle: FontStyle.italic,
+                            height: 1.3,
+                            color: Colors.black),
+                      )
+                          .animate()
+                          .fadeIn(duration: 800.ms)
+                          .moveY(begin: 20, end: 0),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(40)),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          // FIXED withValues
+                          color: Colors.white.withValues(alpha: 0.7),
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(40)),
+                          border: Border.all(
+                            // FIXED withValues
+                            color: Colors.white.withValues(alpha: 0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: _tasks.isEmpty
+                            ? Center(
+                                child: Text(
+                                  "No tasks.\nEnjoy the silence.",
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                      color: Colors.grey[400], fontSize: 16),
+                                ).animate().fadeIn(delay: 300.ms),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.only(
+                                    top: 30, left: 20, right: 20, bottom: 100),
+                                itemCount: _tasks.length,
+                                itemBuilder: (context, index) {
+                                  final task = _tasks[index];
+                                  return Dismissible(
+                                    key: Key(task['id'].toString()),
+                                    direction: DismissDirection.endToStart,
+                                    onDismissed: (_) => _deleteTask(index),
+                                    background: Container(
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.only(right: 20),
+                                      child: const Icon(CupertinoIcons.trash,
+                                          color: Colors.red),
+                                    ),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: ShapeDecoration(
+                                        color: Colors.white,
+                                        shape: ContinuousRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(48),
+                                        ),
+                                        shadows: [
+                                          BoxShadow(
+                                            // FIXED withValues
+                                            color: Colors.black
+                                                .withValues(alpha: 0.03),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          )
+                                        ],
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () => _toggleTask(index),
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                  milliseconds: 200),
+                                              width: 24,
+                                              height: 24,
+                                              decoration: ShapeDecoration(
+                                                color: task['isDone']
+                                                    ? Colors.black
+                                                    : Colors.transparent,
+                                                shape:
+                                                    ContinuousRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  side: const BorderSide(
+                                                      color: Colors.black,
+                                                      width: 1.5),
+                                                ),
+                                              ),
+                                              child: task['isDone']
+                                                  ? const Icon(Icons.check,
+                                                      size: 16,
+                                                      color: Colors.white)
+                                                  : null,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                AnimatedOpacity(
+                                                  duration: const Duration(
+                                                      milliseconds: 200),
+                                                  opacity: task['isDone']
+                                                      ? 0.3
+                                                      : 1.0,
+                                                  child: Text(
+                                                    task['title'],
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      decoration: task['isDone']
+                                                          ? TextDecoration
+                                                              .lineThrough
+                                                          : null,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (task['time'] != null &&
+                                                    !task['isDone'])
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            top: 4.0),
+                                                    child: Text(
+                                                      "Reminder at ${task['time']}",
+                                                      style: TextStyle(
+                                                          fontSize: 11,
+                                                          color:
+                                                              Colors.grey[400]),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                      .animate()
+                                      .fadeIn(delay: (100 * index).ms)
+                                      .slideX(begin: 0.2);
+                                },
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -553,96 +607,112 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) => Container(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 40,
-              top: 40,
-              left: 30,
-              right: 30),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("NEW FOCUS",
-                  style: GoogleFonts.inter(
-                      fontSize: 12, letterSpacing: 2, color: Colors.grey)),
-              TextField(
-                autofocus: true,
-                style: GoogleFonts.inter(
-                    fontSize: 22, fontWeight: FontWeight.w500),
-                decoration: const InputDecoration(
-                    hintText: "What needs doing?", border: InputBorder.none),
-                onChanged: (val) => newTitle = val,
+        builder: (context, setSheetState) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 40,
+                  top: 40,
+                  left: 30,
+                  right: 30),
+              decoration: BoxDecoration(
+                // FIXED withValues
+                color: Colors.white.withValues(alpha: 0.85),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(40)),
               ),
-              const SizedBox(height: 20),
-              Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GestureDetector(
-                    onTap: () async {
-                      final t = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                        builder: (context, child) => Theme(
-                          data: ThemeData.light().copyWith(
-                            colorScheme: const ColorScheme.light(
-                                primary: Colors.black, onSurface: Colors.black),
-                          ),
-                          child: child!,
-                        ),
-                      );
-                      setSheetState(() => selectedTime = t);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: selectedTime != null
-                            ? Colors.black
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(CupertinoIcons.alarm,
-                              size: 16,
-                              color: selectedTime != null
-                                  ? Colors.white
-                                  : Colors.black),
-                          if (selectedTime != null) ...[
-                            const SizedBox(width: 8),
-                            Text(selectedTime!.format(context),
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold)),
-                          ]
-                        ],
-                      ),
-                    ),
+                  Text("NEW FOCUS",
+                      style: GoogleFonts.inter(
+                          fontSize: 12, letterSpacing: 2, color: Colors.grey)),
+                  TextField(
+                    autofocus: true,
+                    style: GoogleFonts.inter(
+                        fontSize: 22, fontWeight: FontWeight.w500),
+                    decoration: const InputDecoration(
+                        hintText: "What needs doing?",
+                        border: InputBorder.none),
+                    onChanged: (val) => newTitle = val,
                   ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () {
-                      if (newTitle.isNotEmpty) {
-                        _addTask(newTitle, selectedTime);
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: const BoxDecoration(
-                          color: Colors.black, shape: BoxShape.circle),
-                      child:
-                          const Icon(Icons.arrow_upward, color: Colors.white),
-                    ),
-                  )
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () async {
+                          final t = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                            builder: (context, child) => Theme(
+                              data: ThemeData.light().copyWith(
+                                colorScheme: const ColorScheme.light(
+                                    primary: Colors.black,
+                                    onSurface: Colors.black),
+                              ),
+                              child: child!,
+                            ),
+                          );
+                          setSheetState(() => selectedTime = t);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          decoration: ShapeDecoration(
+                            color: selectedTime != null
+                                ? Colors.black
+                                : Colors.grey[100],
+                            shape: ContinuousRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(CupertinoIcons.alarm,
+                                  size: 16,
+                                  color: selectedTime != null
+                                      ? Colors.white
+                                      : Colors.black),
+                              if (selectedTime != null) ...[
+                                const SizedBox(width: 8),
+                                Text(selectedTime!.format(context),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold)),
+                              ]
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () {
+                          if (newTitle.isNotEmpty) {
+                            _addTask(newTitle, selectedTime);
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: const ShapeDecoration(
+                              color: Colors.black,
+                              shape: ContinuousRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(25)))),
+                          child: const Icon(Icons.arrow_upward,
+                              color: Colors.white),
+                        ),
+                      )
+                    ],
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
