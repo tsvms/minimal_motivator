@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,18 +20,31 @@ class NotificationService {
 
   static Future<void> init() async {
     tz.initializeTimeZones();
-    const iosSettings = DarwinInitializationSettings(
+
+    // Ορισμός κατηγορίας για το κουμπί "Done" στο iOS
+    final DarwinNotificationCategory taskCategory = DarwinNotificationCategory(
+      'task_actions',
+      actions: <DarwinNotificationAction>[
+        DarwinNotificationAction.plain('done_action', 'Mark as Done',
+            options: {DarwinNotificationActionOption.foreground}),
+      ],
+    );
+
+    final iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
+      notificationCategories: [taskCategory],
     );
-    // Χρειαζόμαστε και το Android initialization για να μην κρασάρει,
-    // ακόμα κι αν στοχεύουμε iOS.
+
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
     await _notifications.initialize(
-      const InitializationSettings(iOS: iosSettings, android: androidSettings),
+      InitializationSettings(iOS: iosSettings, android: androidSettings),
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        _handleNotificationAction(response);
+      },
     );
   }
 
@@ -46,7 +58,12 @@ class NotificationService {
       'Reminder',
       title,
       tz.TZDateTime.from(scheduledTime, tz.local),
-      const NotificationDetails(iOS: DarwinNotificationDetails()),
+      const NotificationDetails(
+        iOS: DarwinNotificationDetails(
+          categoryIdentifier: 'task_actions',
+        ),
+      ),
+      payload: id.toString(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
@@ -75,6 +92,29 @@ class NotificationService {
   }
 
   static Future<void> cancel(int id) async => await _notifications.cancel(id);
+
+  static void _handleNotificationAction(NotificationResponse response) async {
+    if (response.actionId == 'done_action') {
+      final prefs = await SharedPreferences.getInstance();
+      final String? tasksString = prefs.getString('tasks');
+
+      if (tasksString != null) {
+        List<dynamic> rawTasks = jsonDecode(tasksString);
+        List<Map<String, dynamic>> tasks =
+            List<Map<String, dynamic>>.from(rawTasks);
+
+        int? taskId = int.tryParse(response.payload ?? '');
+        if (taskId != null) {
+          for (var task in tasks) {
+            if (task['id'] == taskId) {
+              task['isDone'] = true;
+            }
+          }
+          await prefs.setString('tasks', jsonEncode(tasks));
+        }
+      }
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -82,16 +122,66 @@ class NotificationService {
 // -----------------------------------------------------------------------------
 
 const List<String> kQuotes = [
-  "Simplicity is the ultimate sophistication.",
-  "Do less, but better.",
-  "Focus on what matters.",
-  "Edit your life frequently.",
-  "Silence is a source of great strength.",
-  "Act as if what you do makes a difference.",
-  "Dream big and dare to fail.",
-  "It always seems impossible until it's done.",
-  "Don't count the days, make the days count.",
-  "Everything you can imagine is real."
+  "We suffer more often in imagination than in reality. -Seneca",
+  "Wealth is the slave of a wise man. The master of a fool. -Seneca",
+  "Difficulties strengthen the mind, as labor does the body. -Seneca",
+  "Luck is what happens when preparation meets opportunity. -Seneca",
+  "All cruelty springs from weakness. -Seneca",
+  "He who is brave is free. -Seneca",
+  "No man was ever wise by chance. -Seneca",
+  "Associate with people who are likely to improve you. -Seneca",
+  "Waste no more time arguing about what a good man should be. Be one. -Marcus Aurelius",
+  "The happiness of your life depends upon the quality of your thoughts. -Marcus Aurelius",
+  "Everything we hear is an opinion, not a fact. -Marcus Aurelius",
+  "You have power over your mind - not outside events. -Marcus Aurelius",
+  "The best revenge is to be unlike him who performed the injury. -Marcus Aurelius",
+  "It is not death that a man should fear, but never beginning to live. -Marcus Aurelius",
+  "Very little is needed to make a happy life; it is all within yourself. -Marcus Aurelius",
+  "First say to yourself what you would be; and then do what you have to do. -Epictetus",
+  "It's not what happens to you, but how you react to it that matters. -Epictetus",
+  "If you want to improve, be content to be thought foolish and stupid. -Epictetus",
+  "No man is free who is not master of himself. -Epictetus",
+  "Keep your silence unless you have something better than silence to say. -Epictetus",
+  "The greater the difficulty, the more glory in surmounting it. -Epictetus",
+  "Freedom is won by disregarding things that lie beyond our control. -Epictetus",
+  "Knowing yourself is the beginning of all wisdom. -Aristotle",
+  "We are what we repeatedly do. Excellence, then, is a habit. -Aristotle",
+  "The unexamined life is not worth living. -Socrates",
+  "Be as you wish to seem. -Socrates",
+  "He who has a why to live can bear almost any how. -Nietzsche",
+  "The soul becomes dyed with the color of its thoughts. -Marcus Aurelius",
+  "If it is not right do not do it; if it is not true do not say it. -Marcus Aurelius",
+  "Begin at once to live, and count each separate day as a separate life. -Seneca",
+  "Self-control is strength. Right thought is mastery. Calmness is power. -James Allen",
+  "Act as if what you do makes a difference. It does. -William James",
+  "Small is the number of those who see with their own eyes. -Albert Einstein",
+  "He who is discontented with what he has, would not be contented with what he would like to have. -Socrates",
+  "The mind that is anxious about future events is miserable. -Seneca",
+  "External things are not my problem. My response to them is. -Epictetus",
+  "How long are you going to wait before you demand the best for yourself? -Epictetus",
+  "Don't explain your philosophy. Embody it. -Epictetus",
+  "Curb your desire—don't set your heart on so many things and you will get what you need. -Epictetus",
+  "If someone is able to show me that what I think or do is not right, I will happily change. -Marcus Aurelius",
+  "It is not that we have a short time to live, but that we waste a lot of it. -Seneca",
+  "Life is long if you know how to use it. -Seneca",
+  "While we are postponing, life speeds by. -Seneca",
+  "The tranquilized mind is the best of all gifts. -Seneca",
+  "You live as if you were destined to live forever. -Seneca",
+  "Life, if well lived, is long enough. -Seneca",
+  "The greatest remedy for anger is delay. -Seneca",
+  "Look within. Within is the fountain of good, and it will ever bubble up. -Marcus Aurelius",
+  "Think of yourself as dead. You have lived your life. Now, take what's left and live it properly. -Marcus Aurelius",
+  "The object of life is not to be on the side of the majority, but to escape finding oneself in the ranks of the insane. -Marcus Aurelius",
+  "Reject your sense of injury and the injury itself disappears. -Marcus Aurelius",
+  "What stands in the way becomes the way. -Marcus Aurelius",
+  "Everything is ephemeral—both what remembers and what is remembered. -Marcus Aurelius",
+  "Circumstances don't make the man, they only reveal him to himself. -Epictetus",
+  "You are a little soul carrying around a corpse. -Epictetus",
+  "Only the educated are free. -Epictetus",
+  "Wealth consists not in having great possessions, but in having few wants. -Epictetus",
+  "Nature hath given men one tongue but two ears, that we may hear twice as much as we speak. -Epictetus",
+  "He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has. -Epictetus",
+  "Control your perceptions. Direct your actions properly. Willingly accept what's outside your control. -Marcus Aurelius"
 ];
 
 // -----------------------------------------------------------------------------
@@ -102,7 +192,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.init();
 
-  // Κάνει τη status bar (πάνω μέρος κινητού) διάφανη για full screen look
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
@@ -153,20 +242,31 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Load Quote
     setState(() {
       _currentQuote = kQuotes[Random().nextInt(kQuotes.length)];
     });
 
-    // Load Tasks
     final String? tasksString = prefs.getString('tasks');
+    List<Map<String, dynamic>> loadedTasks = [];
     if (tasksString != null) {
-      setState(() {
-        _tasks = List<Map<String, dynamic>>.from(jsonDecode(tasksString));
-      });
+      loadedTasks = List<Map<String, dynamic>>.from(jsonDecode(tasksString));
     }
 
-    // Load Quote Time
+    final String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final String? lastOpenDate = prefs.getString('last_open_date');
+
+    if (lastOpenDate != null && lastOpenDate != today) {
+      loadedTasks =
+          loadedTasks.where((task) => task['isDone'] == false).toList();
+      await prefs.setString('tasks', jsonEncode(loadedTasks));
+    }
+
+    await prefs.setString('last_open_date', today);
+
+    setState(() {
+      _tasks = loadedTasks;
+    });
+
     final String? timeString = prefs.getString('quote_time');
     if (timeString != null) {
       final parts = timeString.split(':');
@@ -179,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveTasks() async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setString('tasks', jsonEncode(_tasks));
+    await prefs.setString('tasks', jsonEncode(_tasks));
   }
 
   void _addTask(String title, TimeOfDay? time) {
@@ -211,9 +311,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _tasks[index]['isDone'] = !_tasks[index]['isDone'];
     });
     _saveTasks();
-
-    // Αν ολοκληρωθεί, περιμένουμε λίγο και το σβήνουμε ή το αφήνουμε;
-    // Εδώ το αφήνουμε για να φαίνεται η πρόοδος.
   }
 
   void _deleteTask(int index) {
@@ -228,22 +325,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _quoteTime ?? const TimeOfDay(hour: 9, minute: 0),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-                primary: Colors.black, onSurface: Colors.black),
-          ),
-          child: child!,
-        );
-      },
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(
+              primary: Colors.black, onSurface: Colors.black),
+        ),
+        child: child!,
+      ),
     );
 
     if (picked != null) {
       final prefs = await SharedPreferences.getInstance();
-      prefs.setString('quote_time', '${picked.hour}:${picked.minute}');
+      await prefs.setString('quote_time', '${picked.hour}:${picked.minute}');
       setState(() => _quoteTime = picked);
-
       NotificationService.scheduleDailyQuote(picked, _currentQuote);
     }
   }
@@ -262,7 +356,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // --- HEADER & QUOTE ---
             Padding(
               padding: const EdgeInsets.all(32.0),
               child: Column(
@@ -320,21 +413,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     _currentQuote,
                     style: GoogleFonts.inter(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w300,
-                      height: 1.2,
-                      color: Colors.black,
-                    ),
+                        fontSize: 32,
+                        fontWeight: FontWeight.w300,
+                        height: 1.2,
+                        color: Colors.black),
                   ).animate().fadeIn(duration: 800.ms).moveY(begin: 20, end: 0),
                 ],
               ),
             ),
-
-            // --- TASKS LIST ---
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey[50], // Πολύ απαλό γκρι για διαχωρισμό
+                  color: Colors.grey[50],
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(40)),
                 ),
@@ -372,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 borderRadius: BorderRadius.circular(24),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.03),
+                                    color: Colors.black.withValues(alpha: 0.03),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   )
@@ -485,17 +575,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: GoogleFonts.inter(
                     fontSize: 22, fontWeight: FontWeight.w500),
                 decoration: const InputDecoration(
-                  hintText: "What needs doing?",
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.black26),
-                ),
+                    hintText: "What needs doing?", border: InputBorder.none),
                 onChanged: (val) => newTitle = val,
-                onSubmitted: (_) {
-                  if (newTitle.isNotEmpty) {
-                    _addTask(newTitle, selectedTime);
-                    Navigator.pop(context);
-                  }
-                },
               ),
               const SizedBox(height: 20),
               Row(
@@ -533,12 +614,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   : Colors.black),
                           if (selectedTime != null) ...[
                             const SizedBox(width: 8),
-                            Text(
-                              selectedTime!.format(context),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
-                            ),
+                            Text(selectedTime!.format(context),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
                           ]
                         ],
                       ),
@@ -556,9 +635,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 50,
                       height: 50,
                       decoration: const BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                      ),
+                          color: Colors.black, shape: BoxShape.circle),
                       child:
                           const Icon(Icons.arrow_upward, color: Colors.white),
                     ),
